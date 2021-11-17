@@ -2,9 +2,10 @@ from warnings import warn
 import math
 import numpy as np
 import pandas as pd
+from typing import Union
 
 class bpc():
-    def __init__(self, data, player0, player1, model_type = 'bt', result_column= None, player0_score=None, player1_score=None, z_player1 = None, cluster = None, predictors=None, subject_predictors = None, solve_ties = 'random', win_score = 'higher', priors = None, chains = 4, parallel_chains = 4, iter = 2000, warmup = 1000, show_chain_messages = False, seed = None, log_lik=True, dir=None):
+    def __init__(self, data: pd.DataFrame, player0: str, player1: str, model_type: str = 'bt', result_column: Union(str, None) = None, player0_score: Union(str, None)=None, player1_score: Union(str, None)=None, z_player1: Union(str, None) = None, cluster: Union(str, None) = None, predictors=None, subject_predictors = None, solve_ties:str = 'random', win_score:str = 'higher', priors = None, chains:int = 4, parallel_chains:int = 4, iter:int = 2000, warmup:int = 1000, show_chain_messages:bool = False, seed = None, log_lik:bool=True, dir: Union(str, None)=None):
         # first checks if model is consistent
         if ((player0_score is None) or (player1_score is None)) and (result_column is None):
             raise ValueError( 'Error! It is required to have either scores for both player0 and player1 OR a column indicating who won (0 for player0 and 1 for player1)')
@@ -88,7 +89,29 @@ class bpc():
         
         self._create_index_columns()
         
+        #TODO: add subject predictors matrix and lookup table
+
+        #TODO: add generalized model predictors and lookuptable
+
+        #TODO: add cluster lookup table
+
+        #Default priors
+        default_std = 3.0
+        default_mu = 3.0
+
+        prior_lambda_std = None
+        prior_lambda_mu = None
+        prior_nu_std = None
+        prior_nu_mu = None
+        prior_gm_mu = None
+        prior_gm_std = None
+        prior_U1_std = None
+        prior_U2_std = None
+        prior_U3_std = None
+        prior_S_std = None
         
+        #Setting up custom priors
+
         
         
         pass
@@ -146,19 +169,19 @@ class bpc():
 
     def _create_index_lookup_table(self):
         #Stan is 1 indexed
+
+        # Player lookuptable
         names = np.unique(self._data[[self._player0, self._player1]].values)
         index = np.linspace(start=1, stop=names.size,num=names.size)
         self._lookuptable = pd.DataFrame({'Names': names, 'Index': index})
         self._lookuptable['Index'] = self._lookuptable['Index'].astype(int)
        
-        print(self._lookuptable)
         pass
     
     def _create_index_columns(self):
         # We first need to create a lookup table
         self._create_index_lookup_table()
-        
-
+    
         # https://stackoverflow.com/questions/35469399/pandas-table-lookup
         def lookup_index(name):
             match = self._lookuptable['Names'] == name #filter which to apply based on the name
