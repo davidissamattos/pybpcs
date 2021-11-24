@@ -7,46 +7,8 @@ from cmdstanpy import CmdStanModel
 from pandas.core.frame import DataFrame
 
 class bpc():
-    def __init__(self, data: pd.DataFrame, player0: str, player1: str, model_type: str = 'bt', result_column: Union[str, None] = None, player0_score: Union[str, None]=None, player1_score: Union[str, None]=None, z_player1: Union[str, None] = None, cluster: Union[str, None] = None, predictors=None, subject_predictors: Union[DataFrame, None]=None, solve_ties:Union[str, None] = 'random', win_score:str= 'higher', priors: Union[dict, None] = None, chains:int = 4, parallel_chains:int = 4, iter:int = 2000, warmup:int = 1000, show_chain_messages:bool = False, seed = None, log_lik:bool=True, dir: Union[str, None]=None):
-        # first checks if model is consistent
-        if ((player0_score is None) or (player1_score is None)) and (result_column is None):
-            raise ValueError( 'Error! It is required to have either scores for both player0 and player1 OR a column indicating who won (0 for player0 and 1 for player1)')
+    def __init__(self, data: pd.DataFrame, player0: str, player1: str, model_type: str = 'bt', result_column: Union[str, None] = None, player0_score: Union[str, None]=None, player1_score: Union[str, None]=None, z_player1: Union[str, None] = None, cluster: Union[List[str], None] = None, predictors: Union[DataFrame, None]=None, subject_predictors: Union[List[str],None] =None, solve_ties:Union[str, None] = 'random', win_score:str= 'higher', priors: Union[dict, None] = None, chains:int = 4, parallel_chains:int = 4, iter:int = 2000, warmup:int = 1000, show_chain_messages:bool = False, seed = None, log_lik:bool=True, dir: Union[str, None]=None):
         
-        #TODO: check if data is of pandas type
-
-        #order effect checks
-        if (z_player1 is not None) and ('-ordereffect' not in model_type):
-            raise ValueError('Error! If the order effect column is specified you should choose a model with ordereffect')
-        if (z_player1 is None) and ('-ordereffect' in model_type):
-            raise ValueError('Error! You need to provide a column indicating if player 1 had an order effect advantage or not. Use argument z_player1.')
-
-        # random effects checks
-        if (cluster is not None) and ('-U' not in model_type):
-            raise ValueError('Error! If the cluster column is specified you should choose a model to handle the random effects of the cluster')
-        if (cluster is None) and ('-U' in model_type):
-            raise ValueError('Error! You need to provide column(s) in the argument cluster to fit random effects')
-        if (cluster is not None) and (len(cluster)>3) and ('-U' in model_type):
-            raise ValueError('Error! You should add a maximum of 3 clusters only')
-
-        #generalized models checks
-        if (predictors is not None) and ('-generalized' not in model_type):
-            raise ValueError('Error! If the predictors dataframe is specified you should choose a generalized model')
-        if (predictors is None) and ('-generalized'  in model_type):
-            raise ValueError('Error! You need to provide a data frame of predictors to use the generalized model')
-
-        #subject predictors
-        if (subject_predictors is not None) and ('-subjectpredictors' not in model_type):
-            raise ValueError('Error! If the subject_predictors dataframe is specified you should choose a subjectpredictors model')
-        if (subject_predictors is None) and ('-subjectpredictors'  in model_type):
-            raise ValueError('Error! You need to provide a data frame of subject_predictors to use the subjectpredictors model')
-
-        # davidson models checks
-        if (solve_ties != 'none') and (model_type.startswith('davidson')):
-            warn('You are calling a variation of the Davidson model but you are handling the ties. Consider switching to a Bradley-Terry model or setting solve_ties to none')
- 
-
-        #TODO: subject predictors checks
-
         # saving the input arguments
         self._data = data
         self._player0 = player0
@@ -69,6 +31,82 @@ class bpc():
         self._seed = seed
         self._log_lik = log_lik
         self._dir = dir
+        
+        
+        # first checks if model is consistent
+        if ((player0_score is None) or (player1_score is None)) and (result_column is None):
+            raise ValueError( 'Error! It is required to have either scores for both player0 and player1 OR a column indicating who won (0 for player0 and 1 for player1)')
+        
+        # check the values of the result column and give an error in case it does not fulfill the requirementss
+        results_values = list(self._data[self._result_column].values)
+        for v in results_values:
+            if v not in [0,1,2]:
+                raise ValueError('The result column should only contain values 0, 1 or 2')
+
+
+        #check if data is of pandas type
+        if type(data) is not DataFrame:
+            raise ValueError( 'Input data should be a Pandas DataFrame object')
+
+        #order effect checks
+        if (z_player1 is not None) and ('-ordereffect' not in model_type):
+            raise ValueError('Error! If the order effect column is specified you should choose a model with ordereffect')
+        if (z_player1 is None) and ('-ordereffect' in model_type):
+            raise ValueError('Error! You need to provide a column indicating if player 1 had an order effect advantage or not. Use argument z_player1.')
+        # We check the order effect column to see if contains values different than 0 or 1 
+        if(self._z_player1 is not None):
+            values = self._data[self._z_player1].values
+            for v in results_values:
+                if v not in [0,1]:
+                    raise ValueError('The z_player1 column should contain only 0 and 1.')
+
+
+        # random effects checks
+        if (cluster is not None) and ('-U' not in model_type):
+            raise ValueError('Error! If the cluster column is specified you should choose a model to handle the random effects of the cluster')
+        if (cluster is None) and ('-U' in model_type):
+            raise ValueError('Error! You need to provide column(s) in the argument cluster to fit random effects')
+        if (cluster is not None) and (len(cluster)>3):
+            raise ValueError('Error! You should add a maximum of 3 clusters only')
+
+        #generalized models checks
+        if (predictors is not None) and ('-generalized' not in model_type):
+            raise ValueError('Error! If the predictors dataframe is specified you should choose a generalized model')
+        if (predictors is None) and ('-generalized'  in model_type):
+            raise ValueError('Error! You need to provide a data frame of predictors to use the generalized model')
+                #check if data is of pandas type
+        if type(predictors) is not DataFrame:
+            raise ValueError( 'The predictors should be a Pandas DataFrame object')
+
+
+        #subject predictors
+        if (subject_predictors is not None) and ('-subjectpredictors' not in model_type):
+            raise ValueError('Error! If the subject_predictors dataframe is specified you should choose a subjectpredictors model')
+        if (subject_predictors is None) and ('-subjectpredictors'  in model_type):
+            raise ValueError('Error! You need to provide a data frame of subject_predictors to use the subjectpredictors model')
+
+        # davidson models checks
+        if (solve_ties != 'none') and (model_type.startswith('davidson')):
+            warn('You are calling a variation of the Davidson model but you are handling the ties. Consider switching to a Bradley-Terry model or setting solve_ties to none')
+        # We fix the ties and compute a result column from the scores
+        self._compute_scores_ties()
+        # if we have ties, and we are not using the davidson model and we are not solving the ties we have an error
+        if (2 in self._data[self._result_column].values) and ('davidson' not in self._model_type) and (self._solve_ties == 'none'):
+            raise ValueError('We see ties on the data. If not handling ties a version of the Davidson model should be used ')
+       
+
+        #TODO: subject predictors checks
+
+
+        # lets first drop NA cases since we are not handling those
+        data_cols = list(self._data.columns)
+        dropna_cols = []
+        for z in [self._player0, self._player1, self._player0_score, self._player1_score, self._result_column, self._subject_predictors, self._z_player1]:
+            if z is not None:
+                if z in data_cols:
+                    dropna_cols.append(z)    
+        self._data.dropna(subset=dropna_cols, inplace=True)
+
 
         #Rate of messages in Stan
         self._refresh = False
@@ -77,34 +115,6 @@ class bpc():
         else:
              self._refresh = math.floor(self._iter / 10)
 
-        #Now fix the data frame and the parameters so it can be used by cmdstanpy
-
-        ## lets first drop NA cases since we are not handling those
-        data_cols = list(self._data.columns)
-        dropna_cols = []
-        for z in [self._player0, self._player1, self._player0_score, self._player1_score, self._result_column, self._subject_predictors, self._z_player1]:
-            if z is not None:
-                if z in data_cols:
-                    dropna_cols.append(z)
-        
-        self._data.dropna(subset=dropna_cols, inplace=True)
-
-        # check the values of the result column and give an error in case it does not fulfill the requirementss
-        results_values = list(self._data[self._result_column].values)
-        for v in results_values:
-            if v not in [0,1,2]:
-                raise ValueError('The result column should only contain values 0, 1 or 2')
-        
-        # We fix the ties and compute a result column from the scores
-        self._compute_scores_ties()
-        # if we have ties, and we are not using the davidson model and we are not solving the ties we have an error
-        if (2 in self._data[self._result_column].values) and ('davidson' not in self._model_type) and (self._solve_ties == 'none'):
-            raise ValueError('We see ties on the data. If not handling ties a version of the Davidson model should be used ')
-       
-        # We check the order effect column to see if contains values different than 0 or 1 
-        if(self._z_player1 is not None):
-            if self._data[self._z_player1].values != 1 and  self._data[self._z_player1].values != 0:
-                raise ValueError('The z_player1 column should contain only 0 and 1.')
 
         # Now that we created the basic checks we need to handle the factors and the different conditions
         # For the Stan model we need the indexes of the players etc and not the actual names
