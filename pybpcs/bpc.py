@@ -75,7 +75,7 @@ class bpc():
         if (predictors is None) and ('-generalized'  in model_type):
             raise ValueError('Error! You need to provide a data frame of predictors to use the generalized model')
                 #check if data is of pandas type
-        if type(predictors) is not DataFrame:
+        if (predictors is not None) and (type(predictors) is not DataFrame):
             raise ValueError( 'The predictors should be a Pandas DataFrame object')
 
 
