@@ -1,7 +1,7 @@
 from pandas.core.frame import DataFrame
 import pytest
 from pybpcs import bpc
-from pybpcs.data import *
+from tests.testdata import *
 
 
 class TestInputErrors:
@@ -31,7 +31,7 @@ class TestInputErrors:
             )
 
     #input should be a dataframe
-    def test_input_not_a_dataframe():
+    def test_input_not_a_dataframe(self):
         with pytest.raises(ValueError):
             bpc(
                 data=[1, 2, 3],
@@ -43,7 +43,7 @@ class TestInputErrors:
             )
 
     #contains only 0 1 or 2 in the results column
-    def test_results_values():
+    def test_results_values(self):
         d = {
             "player0": ["A", "A", "A", "A", "A", "A", "B", "B", "B"],
             "player1": ["B", "B", "B", "C", "C", "C", "C", "C", "C"],
@@ -81,6 +81,7 @@ class TestInputErrors:
                 model_type="bt-ordereffect",
             )
 
+    #error if z_player1 has values different than 0 and 1
     def test_ordereffect3(self):
         d = {
             "player0": ["A", "A", "A", "A", "A", "A", "B", "B", "B"],

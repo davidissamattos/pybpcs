@@ -1,1 +1,3 @@
 include pybpcs/csv/tennis_agresti.csv
+include pybpcs/stan/bt.stan
+include pybpcs/stan/license.stan
